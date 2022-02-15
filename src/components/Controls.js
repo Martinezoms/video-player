@@ -143,7 +143,7 @@ function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTi
               <FontAwesomeIcon
                 icon={mute ? "volume-mute" : "volume-up"}
                 title={mute ? "Unmute" : "Mute"}
-                className=" cursor-pointer"
+                className=" cursor-pointer hover:text-dodgerBlue"
                 onClick={muteUnmuteVideo}
               />
               {/* Volume range */}
