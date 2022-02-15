@@ -1,10 +1,29 @@
-import { useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTime, durationTime }) {
+function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTime, durationTime, player }) {
+  const [mute, setMute] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [lastVolume, setLastVolume] = useState(1);
   const progressRange = useRef();
   const volumeRange = useRef();
   const volumeBar = useRef();
+
+  console.log(fullscreen);
+
+  const toggleMute = () => {
+    setMute(!mute);
+  };
+
+  const toggleFullscreen = () => {
+    const app = player.current;
+    if (!fullscreen) {
+      openFullscreen(app);
+    } else {
+      closeFullscreen(app);
+    }
+    setFullscreen(!fullscreen);
+  };
 
   const setProgressBar = (e) => {
     const xClick = e.nativeEvent.offsetX;
@@ -16,19 +35,85 @@ function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTi
 
   const changeVolume = (e) => {
     let volume = e.nativeEvent.offsetX / volumeRange.current.offsetWidth;
-    console.log("before =>", volume);
 
-    // if (volume < 0.1) {
-    // volume = 0;
-    // }
-    // if (volume > 0.9) {
-    // volume = 1;
-    // }
+    if (volume < 0.1) {
+      volume = 0;
+      setMute(true);
+    } else {
+      setMute(false);
+    }
+    if (volume > 0.9) {
+      volume = 1;
+    }
 
     volumeBar.current.style.width = `${volume * 100}%`;
-    // videoRef.current.volume = volume;
-    console.log("after =>", volume);
+    videoRef.current.volume = volume;
+
+    setLastVolume(volume);
   };
+
+  const muteUnmuteVideo = () => {
+    if (mute) {
+      volumeBar.current.style.width = `${lastVolume * 100}%`;
+      videoRef.current.volume = lastVolume;
+
+      toggleMute();
+    } else {
+      videoRef.current.volume = 0;
+      volumeBar.current.style.width = 0;
+      toggleMute();
+    }
+  };
+
+  const changeSpeed = (e) => {
+    videoRef.current.playbackRate = e.target.value;
+  };
+
+  /* View in fullscreen */
+  const openFullscreen = (elem) => {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+      /* IE11 */
+      elem.msRequestFullscreen();
+    }
+    videoRef.current.classList.add("video-fullscreen");
+  };
+
+  /* Close fullscreen */
+  const closeFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      /* Safari */
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      /* IE11 */
+      document.msExitFullscreen();
+    }
+    videoRef.current.classList.remove("video-fullscreen");
+  };
+
+  const updateFullscreenState = () => {
+    if (
+      document.fullscreenElement /* Standard syntax */ ||
+      document.webkitFullscreenElement /* Safari and Opera syntax */ ||
+      document.msFullscreenElement /* IE11 syntax */
+    ) {
+      setFullscreen(true);
+      videoRef.current.classList.add("video-fullscreen");
+    } else {
+      setFullscreen(false);
+      videoRef.current.classList.remove("video-fullscreen");
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+  });
 
   return (
     <div className="absolute bottom-0 cursor-default z-20 w-full h-1/3 text-white text-4xl xs:text-xl select-none show-controls">
@@ -55,13 +140,21 @@ function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTi
             />
             {/* Volume */}
             <div className="flex gap-4 xs:gap-2  items-center absolute top-0 left-11 xs:left-6">
-              <FontAwesomeIcon icon="volume-up" title="Mute" className=" cursor-pointer" />
+              <FontAwesomeIcon
+                icon={mute ? "volume-mute" : "volume-up"}
+                title={mute ? "Unmute" : "Mute"}
+                className=" cursor-pointer"
+                onClick={muteUnmuteVideo}
+              />
               {/* Volume range */}
-              <div ref={volumeRange} className=" h-2 w-24 xs:w-16 xs:h-1 bg-gray-300/50 rounded-3xl cursor-pointer">
+              <div
+                ref={volumeRange}
+                className=" h-2 w-24 xs:w-16 xs:h-1 bg-gray-300/50 rounded-3xl cursor-pointer"
+                onClick={changeVolume}
+              >
                 <div
                   ref={volumeBar}
                   className=" bg-white  h-full w-full rounded-3xl transition-{width} delay-100 ease-in-out hover:bg-dodgerBlue"
-                  onClick={changeVolume}
                 ></div>
               </div>
             </div>
@@ -73,11 +166,12 @@ function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTi
               <select
                 name="playbackRate"
                 className="text-2xl xs:text-xs mr-4 rounded-lg absolute -top-2.5 right-2 bg-inherit"
-                defaultValue="1.0"
+                defaultValue="1"
+                onChange={changeSpeed}
               >
                 <option value="0.5">0.5 x</option>
                 <option value="0.75">0.75 x</option>
-                <option value="1.0">1.0 x</option>
+                <option value="1">1.0 x</option>
                 <option value="1.5">1.5 x</option>
                 <option value="2">2.0 x</option>
               </select>
@@ -88,7 +182,12 @@ function Controls({ videoRef, playVideo, playPauseVideo, progressBar, progressTi
               <span>{durationTime}</span>
             </div>
             {/* Screen resolution */}
-            <FontAwesomeIcon icon="expand-alt" className="text-3xl xs:text-xl cursor-pointer hover:text-dodgerBlue" />
+            <FontAwesomeIcon
+              icon={fullscreen ? "compress-alt" : "expand-alt"}
+              title={fullscreen ? "" : "Fullscreen"}
+              className="text-3xl xs:text-xl cursor-pointer hover:text-dodgerBlue"
+              onClick={toggleFullscreen}
+            />
           </div>
         </div>
       </div>

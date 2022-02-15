@@ -15,6 +15,7 @@ import "./App.css";
 library.add(faS, faPause, faPlay, faVolumeUp, faVolumeMute, faExpandAlt, faCompressAlt);
 
 function App() {
+  const player = useRef();
   const videoRef = useRef();
   const progressBar = useRef();
   const [playVideo, setplayVideo] = useState(false);
@@ -50,7 +51,7 @@ function App() {
   };
 
   return (
-    <div className="player video-fullscreen">
+    <div className="player" ref={player}>
       <video
         src="https://pixabay.com/videos/download/video-1900_medium.mp4?attachment"
         playsInline
@@ -62,6 +63,7 @@ function App() {
         onCanPlay={updateProgress}
       ></video>
       <Controls
+        player={player}
         videoRef={videoRef}
         progressBar={progressBar}
         playVideo={playVideo}
